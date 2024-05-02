@@ -121,7 +121,7 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
                             logging.info(f"Sighted Bird not seen in last 30 days: {obs['comName']}, {obs['obsDt']}, {obs['locName']}")
                             # exit(0)
 
-                            '''
+                            # '''
                             # Send notification to NTFY
                             try:
                                 requests.post('https://ntfy.sh/brandebird',
@@ -135,7 +135,7 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
                                 logging.error(f"Caught Exception: {e}")
                             except BaseException as be:
                                 logging.error(f"Caught BaseException: {be}")
-                            '''
+                            # '''
 
                 except Exception as e:
                     logging.error(f"Caught Exception: {e}")
