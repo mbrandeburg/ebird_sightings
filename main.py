@@ -15,8 +15,11 @@ import time
 @click.option('--mode', '-m', default='unique', help='Mode of operation: all birds or unique birds (from last 24 hours)')
 '''
 
+# Define the base directory for storing CSV files
+base_directory = '/mnt/'
+
 def store_to_csv(set_name, data, base_filename='unique_birds'):
-    csv_filename = f"{base_filename}_{set_name}.csv"
+    csv_filename = f"{base_directory}{base_filename}_{set_name}.csv"
     # Check if the file exists and read species codes if it does
     existing_species = set()
     if os.path.exists(csv_filename):
@@ -115,8 +118,9 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
 def reset_csv_file():
     csv_filenames=['unique_birds_more_than_24_hours.csv','unique_birds_today.csv']
     for csv_filename in csv_filenames:
+        full_path = f"{base_directory}{csv_filename}"
         try:
-            os.remove(csv_filename)
+            os.remove(full_path)
             logging.info("CSV file reset successfully.")
         except OSError as e:
             logging.error(f"Error resetting CSV file: {e}")
