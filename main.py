@@ -1,4 +1,5 @@
 import os
+import csv
 # import click
 import datetime
 from datetime import datetime,timedelta
@@ -7,11 +8,31 @@ import requests
 import threading
 import time
 
+'''
+@click.command()
+@click.option('--distance', '-d', default='10', help='Distance (in kilometers) from the center point')
+@click.option('--days-back', '-b', default='30', help='Number of days back to search for observations')
+@click.option('--mode', '-m', default='unique', help='Mode of operation: all birds or unique birds (from last 24 hours)')
+'''
 
-# @click.command()
-# @click.option('--distance', '-d', default='10', help='Distance (in kilometers) from the center point')
-# @click.option('--days-back', '-b', default='30', help='Number of days back to search for observations')
-# @click.option('--mode', '-m', default='unique', help='Mode of operation: all birds or unique birds (from last 24 hours)')
+def store_to_csv(set_name, data, base_filename='unique_birds'):
+    csv_filename = f"{base_filename}_{set_name}.csv"
+    # Check if the file exists and read species codes if it does
+    existing_species = set()
+    if os.path.exists(csv_filename):
+        with open(csv_filename, mode='r', newline='') as file:
+            reader = csv.reader(file)
+            for row in reader:
+                existing_species.add(row[0])  # Assuming species_code is in the first column
+
+    # Write new species code if not found
+    if data[0] not in existing_species:
+        with open(csv_filename, mode='a', newline='') as file:
+            writer = csv.writer(file)
+            writer.writerow(data)
+            logging.info(f"Added new unique bird to {csv_filename}: {data}")
+    else:
+        logging.info(f"Species {data[0]} already exists in {csv_filename}. No addition made.")
 
 
 def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
@@ -35,15 +56,11 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
     # Make the API request and get the response
     try:
         response = requests.get(ebird_url, headers={'X-eBirdApiToken': ebirdKey}, params=params)
-        # print("Response Code:", response.status_code)
-        # print("Response Body:", response.text)
         # logging.info(f"Response: {response.text}")  
     except Exception as e:
         logging.error(f"Caught Exception: {e}")
-        # print("Exception occurred:", e)
     except BaseException as be:
         logging.error(f"Caught BaseException: {be}")
-        # print("Base Exception occurred:", be)
 
     # If the request was successful, print the bird observations
     if response.status_code == 200:
@@ -62,18 +79,17 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
                 species_code = obs['speciesCode']
                 observation_date = datetime.strptime(obs['obsDt'], '%Y-%m-%d %H:%M')
                 today = datetime.now().date()
-                if (species_code not in unique_birds_more_than_24_hours) and (today - observation_date.date()) > timedelta(days=1): # Birds sightings over 24 hrs old
-                    unique_birds_more_than_24_hours.add(species_code)
-                    # logging.info(f"Sighted Bird over 24hrs ago: {obs['comName']}, {obs['obsDt']}, {obs['locName']}")
+                row_data = [species_code, obs['comName'], obs['obsDt'], obs['locName']]
+                
+                if (today - observation_date.date()) > timedelta(days=1):
+                    if species_code not in unique_birds_more_than_24_hours:
+                        unique_birds_more_than_24_hours.add(species_code)
+                        store_to_csv('more_than_24_hours', row_data)
 
-
-            for obs in data:
-                species_code = obs['speciesCode']
-                observation_date = datetime.strptime(obs['obsDt'], '%Y-%m-%d %H:%M')
-                today = datetime.now().date()
-                if (species_code not in unique_birds_more_than_24_hours) and (today - observation_date.date()) <= timedelta(days=1): # Birds in last 24 hrs
-                    if (species_code not in unique_birds_today) and (today - observation_date.date()) <= timedelta(days=1):
+                if (today - observation_date.date()) <= timedelta(days=1):
+                    if species_code not in unique_birds_today:
                         unique_birds_today.add(species_code)
+                        store_to_csv('today', row_data)
                         logging.info(f"Sighted Bird not seen in last 30 days: {obs['comName']}, {obs['obsDt']}, {obs['locName']}")
 
                         # '''
@@ -96,14 +112,28 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
     else:
         logging.error(f'Error: {response.status_code}')
 
-# def run_background_task(distance, days_back, mode):
+def reset_csv_file():
+    csv_filenames=['unique_birds_more_than_24_hours.csv','unique_birds_today.csv']
+    for csv_filename in csv_filenames:
+        try:
+            os.remove(csv_filename)
+            logging.info("CSV file reset successfully.")
+        except OSError as e:
+            logging.error(f"Error resetting CSV file: {e}")
+
+
 def run_background_task():
-    """Background task to check new posts and interact with the database."""
-    
+    last_reset_time = time.time()
     while True:
-        # unique_birds_fn(distance, days_back, mode)
+
+        # Clear out CSV files every 25 hours
+        current_time = time.time()
+        if (current_time - last_reset_time) > 90000:  # 90000 seconds = 25 hours
+            reset_csv_file()
+            last_reset_time = current_time
+
         unique_birds_fn(distance=10,days_back=30,mode='unique',ebirdKey=os.environ['EBIRDAPI'], NTFY_TOKEN = os.environ["NTFY_TOKEN"])
-        time.sleep(86400) # Check 1x per day
+        time.sleep(3600) # Check 1x per hour
         # time.sleep(1)
 
 def start_background_task():
