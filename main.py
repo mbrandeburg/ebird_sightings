@@ -76,7 +76,7 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
                         unique_birds_today.add(species_code)
                         logging.info(f"Sighted Bird not seen in last 30 days: {obs['comName']}, {obs['obsDt']}, {obs['locName']}")
 
-                        '''
+                        # '''
                         # Send notification to NTFY
                         try:
                             requests.post('https://ntfy.sh/brandebird',
@@ -90,7 +90,7 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
                             logging.error(f"Caught Exception: {e}")
                         except BaseException as be:
                             logging.error(f"Caught BaseException: {be}")
-                        '''
+                        # '''
         else:
             logging.error('Error: mode must be "all" or "unique". Run --help for more information.')
     else:
@@ -103,8 +103,8 @@ def run_background_task():
     while True:
         # unique_birds_fn(distance, days_back, mode)
         unique_birds_fn(distance=10,days_back=30,mode='unique',ebirdKey=os.environ['EBIRDAPI'], NTFY_TOKEN = os.environ["NTFY_TOKEN"])
-        # time.sleep(86400) # Check 1x per day
-        time.sleep(1)
+        time.sleep(86400) # Check 1x per day
+        # time.sleep(1)
 
 def start_background_task():
     """Start the background task in a separate thread."""
