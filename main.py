@@ -91,6 +91,7 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
     # If the request was successful, print the bird observations
     if response.status_code == 200:
         data = response.json()
+        logging.info(f"Number of observations: {len(data)}")
         # exit(0)
 
         # ALL observations
@@ -144,7 +145,7 @@ def unique_birds_fn(distance, days_back, mode, ebirdKey, NTFY_TOKEN):
         else:
             logging.error('Error: mode must be "all" or "unique". Run --help for more information.')
     else:
-        logging.error(f'Error: {response.status_code}')
+        logging.error(f'Error: {response.status_code}: {response}')
 
 def reset_csv_file():
     csv_filenames=['unique_birds_more_than_24_hours.csv','unique_birds_today.csv']
